@@ -416,7 +416,23 @@ class Gradient:
             await asyncio.sleep(3)
             await page2.keyboard.press('Escape')
             await asyncio.sleep(3)
-            await asyncio.create_task(self.infinity_work(page, page2))
+            while True:
+                idx = 'Farming'
+                try:
+                    logger.info(f"{self.number_of_list} | {self.mail} | {idx} | Start farming..")
+                    await page2.bring_to_front()
+                    status = await self.staus_extension(page2)
+                    await page.bring_to_front()
+                    points = await self.dashboard_node(page)
+                    logger.info(
+                        f"{self.number_of_list} | {self.mail} | {idx} | Status node: {status}; Points: {points}")
+                    delay = random.randint(630, 700)
+                    logger.info(
+                        f"{self.number_of_list} | {self.mail} | {idx} | Waiting {delay}s for the updating stats...")
+                    await asyncio.sleep(delay)
+
+                except Exception as error:
+                    logger.error(f"{self.number_of_list} | {self.mail} | {idx} | Error: {error}")
 
 
     async def staus_extension(self, page2):
