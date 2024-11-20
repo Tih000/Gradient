@@ -504,7 +504,6 @@ class Gradient:
 
             try:
                 status, points = await self.dashboard_node(page)
-
                 logger.info(
                     f"{self.number_of_list} | {self.mail} | {idx} | Status node: {status}; Points: {points}")
             except Exception as error:
@@ -512,10 +511,12 @@ class Gradient:
                     f"{self.number_of_list} | {self.mail} | {idx} | Something wrong! Try again after 20 seconds.. Error: error {error}")
                 await context.close()
                 await asyncio.sleep(20)
-                await self.get_stats()
+                return await self.get_stats()
 
 
     async def dashboard_node(self, page):
+            points = None
+            status = None
             if page.is_closed():
                 return "Page is closed"
             try:
@@ -525,24 +526,29 @@ class Gradient:
                 pass
             try:
                 status = page.locator('//html/body/div[1]/div[1]/div[2]/main/div/div/div/div/div/div[2]/table/tbody/tr[1]/td[2]/div/span')
-
+                await expect(status).to_be_visible(timeout=5000)
             except:
-                pass
                 try:
                     status = page.locator(
                         '//html/body/div[1]/div[1]/div[2]/main/div/div/div/div/div/div[2]/table/tbody/tr/td[2]/div/span')
+                    await expect(status).to_be_visible(timeout=5000)
                 except:
-                    status = page.locator(
-                        '//html/body/div[1]/div[1]/div[2]/main/div/div/div/div/div/div[2]/div/span')
-                    logger.warning(f"{self.number_of_list} | {self.mail} | While extension doesnt add to the list..")
-                    status, points = "NON"
+                    try:
+                        status = page.locator(
+                            '//html/body/div[1]/div[1]/div[2]/main/div/div/div/div/div/div[2]/div/span')
+                        await expect(status).to_be_visible(timeout=5000)
+                        logger.warning(f"{self.number_of_list} | {self.mail} | While extension doesnt add to the list..")
+                    except:
+                        pass
+                    points = None
+                    status = None
                     return status, points
-            await expect(status).to_be_visible()
             try:
                 points = await asyncio.wait_for(points.inner_text(), timeout=10)
                 status = await asyncio.wait_for(status.inner_text(), timeout=10)
 
             except asyncio.TimeoutError:
-                status, points = "Unknown"
+                status = "Unknown"
+                points = "Unknown"
             await page.close()
             return status, points
