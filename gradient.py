@@ -180,7 +180,7 @@ class Gradient:
                 await expect(button_sign_up).to_be_visible()
                 await button_sign_up.click()
                 logger.info(f"{self.number_of_list} | {self.mail} | {idx} | Waiting for getting code...")
-                await asyncio.sleep(3)
+                await asyncio.sleep(7)
                 screen_width = await page.evaluate("window.innerWidth")
                 await page.mouse.click(screen_width * 0.9, 300)
                 email_code = await self.connect_to_email()
