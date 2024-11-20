@@ -8,17 +8,17 @@ from bs4 import BeautifulSoup
 import email, json
 from email.policy import default
 
-
 EXTENTION_PATH = os.path.join(os.getcwd(), '1.0.5_0')
 #caacbgbklghmpodbdafajbgdnegacfmo
 
 class Gradient:
+    all_stats = []
     def __init__(self, mail: str, email_password: str, proxy: str, number_of_list: int, ):
         self.mail = mail.strip()
         self.proxy = proxy.strip()
         self.number_of_list = number_of_list
         self.email_password = email_password.strip()
-        self.state_file = f"./states/{self.mail}_state.json"
+
 
     @staticmethod
     def extract_verification_code_from_html(html_body):
@@ -180,7 +180,7 @@ class Gradient:
                 await expect(button_sign_up).to_be_visible()
                 await button_sign_up.click()
                 logger.info(f"{self.number_of_list} | {self.mail} | {idx} | Waiting for getting code...")
-                await asyncio.sleep(15)
+                await asyncio.sleep(3)
                 screen_width = await page.evaluate("window.innerWidth")
                 await page.mouse.click(screen_width * 0.9, 300)
                 email_code = await self.connect_to_email()
@@ -202,7 +202,6 @@ class Gradient:
                     await page.keyboard.press('Escape')
                     await asyncio.sleep(3)
                     logger.info(f"{self.number_of_list} | {self.mail} | {idx} | Successfully registration")
-                    await context.storage_state(path=self.state_file)
                     return context
 
                 else:
@@ -252,7 +251,6 @@ class Gradient:
                     await page.keyboard.press('Escape')
                     await asyncio.sleep(3)
                     logger.info(f"{self.number_of_list} | {self.mail} | {idx} | Successfully registration")
-                    await context.storage_state(path=self.state_file)
                     return context
 
             except Exception as error:
@@ -280,34 +278,10 @@ class Gradient:
                            'password': password},
                     user_agent=UserAgent().chrome,
                     args=[
-                        "--disable-blink-features=AutomationControlled",
                         '--disable-extensions-except=' + EXTENTION_PATH,
                         '--load-extension=' + EXTENTION_PATH,
-                        '--land=en',
                     ] + (['--headless=new'] if HEADLESS else []),
                 )
-
-                try:
-                    with open(self.state_file, 'r') as file:
-                        state_data = json.load(file)
-                        await context.add_cookies(state_data["cookies"])
-                        if "origins" in state_data:
-                            for origin in state_data["origins"]:
-                                try:
-                                    page = await context.new_page()
-                                    await page.goto(origin["origin"])
-                                    for item in origin.get("localStorage", []):
-                                        await page.evaluate(
-                                            f"localStorage.setItem('{item['name']}', '{item['value']}');")
-                                except Exception as e:
-                                    pass
-                        logger.info(
-                            f"{self.number_of_list} | {self.mail} | {idx} | Successfully importing from {self.state_file}")
-
-                except (FileNotFoundError, json.JSONDecodeError) as e:
-                    logger.warning(f"{self.number_of_list} | {self.mail} | {idx} | Starting without state_file.json")
-
-
             except Exception as error:
                 retry += 1
                 if retry > 5:
@@ -406,78 +380,168 @@ class Gradient:
                 await asyncio.sleep(20)
                 logger.info(f"{self.number_of_list} | {self.mail} | {idx} | Starting {retry}/5 time")
                 await self.perform_farming_actions(ref_code, retry=retry)
-            await context.storage_state(path=self.state_file)
 
-            page2 = await context.new_page()
-            await page2.goto("chrome-extension://caacbgbklghmpodbdafajbgdnegacfmo/popup.html")
-            button_got_it = page2.locator('//html/body/div[2]/div/div[2]/div/div[2]/div/div/div/button')
-            await expect(button_got_it).to_be_visible()
-            await button_got_it.click()
-            await asyncio.sleep(3)
-            await page2.keyboard.press('Escape')
-            await asyncio.sleep(3)
-            while True:
-                idx = 'Farming'
-                try:
-                    logger.info(f"{self.number_of_list} | {self.mail} | {idx} | Start farming..")
-                    await page2.bring_to_front()
-                    status = await self.staus_extension(page2)
-                    await page.bring_to_front()
-                    points = await self.dashboard_node(page)
-                    logger.info(
-                        f"{self.number_of_list} | {self.mail} | {idx} | Status node: {status}; Points: {points}")
-                    delay = random.randint(630, 700)
-                    logger.info(
-                        f"{self.number_of_list} | {self.mail} | {idx} | Waiting {delay}s for the updating stats...")
-                    await asyncio.sleep(delay)
-
-                except Exception as error:
-                    logger.error(f"{self.number_of_list} | {self.mail} | {idx} | Error: {error}")
-
-
-    async def staus_extension(self, page2):
-        async with async_playwright() as p:
-            await page2.bring_to_front()
-            await page2.reload()
-            await page2.goto("chrome-extension://caacbgbklghmpodbdafajbgdnegacfmo/popup.html")
             try:
+                page2 = await context.new_page()
+                await page2.goto("chrome-extension://caacbgbklghmpodbdafajbgdnegacfmo/popup.html")
                 button_got_it = page2.locator('//html/body/div[2]/div/div[2]/div/div[2]/div/div/div/button')
                 await expect(button_got_it).to_be_visible()
                 await button_got_it.click()
-            except Exception:
+                await asyncio.sleep(3)
+                await page2.keyboard.press('Escape')
+                await page.bring_to_front()
+                await page.goto('https://app.gradient.network/dashboard/node')
+            except:
                 pass
-
-            await asyncio.sleep(3)
-            await page2.keyboard.press('Escape')
-            await asyncio.sleep(3)
-            status = page2.locator('//*[@id="root-gradient-extension-popup-20240807"]/div/div[1]/div[2]/div[3]/div[2]/div')
-            return await status.inner_text()
-
-
-    async def dashboard_node(self, page):
-        async with async_playwright() as p:
-            await page.bring_to_front()
-            await page.reload()
-            points = page.locator('//html/body/div[1]/div[1]/div[2]/header/div/div[2]/div[2]/div[2]')
-            return await points.inner_text()
-
-
-    async def infinity_work(self, page, page2):
-        async with async_playwright() as p:
             while True:
                 idx = 'Farming'
+                check = False
                 try:
                     logger.info(f"{self.number_of_list} | {self.mail} | {idx} | Start farming..")
-                    await page2.bring_to_front()
-                    status = await self.staus_extension(page2)
-                    await page.bring_to_front()
-                    points = await self.dashboard_node(page)
+                    try:
+                        # await asyncio.wait_for(page.reload(), timeout=10)
+                        await asyncio.wait_for(
+                            page.goto('https://app.gradient.network/dashboard/node'),
+                            timeout=10
+                        )
+
+                    except asyncio.TimeoutError:
+                        await asyncio.sleep(3)
+
+                    try:
+                        # await asyncio.wait_for(page.reload(), timeout=10)
+                        await asyncio.wait_for(
+                            page2.goto('chrome-extension://caacbgbklghmpodbdafajbgdnegacfmo/popup.html'),
+                            timeout=10
+                        )
+
+                    except asyncio.TimeoutError:
+                        await asyncio.sleep(5)
+                    # status, points = await self.get_status(page2)
+                    # status, points = await self.dashboard_node(page)
+                    # logger.info(
+                    #     f"{self.number_of_list} | {self.mail} | {idx} | Status node: {status}; Points: {points}")
+                    delay = random.randint(600, 700)
                     logger.info(
-                        f"{self.number_of_list} | {self.mail} | {idx} | Status node: {status}; Points: {points}")
-                    delay = random.randint(630, 700)
-                    logger.info(
-                        f"{self.number_of_list} | {self.mail} | {idx} | Waiting {delay}s for the updating stats...")
+                        f"{self.number_of_list} | {self.mail} | {idx} | Waiting {delay}s for the updating ...")
+                    check = True
                     await asyncio.sleep(delay)
+
+                except asyncio.CancelledError:
+                    if check:
+                        await asyncio.sleep(delay)
+                    else:
+                        logger.info(
+                            f"{self.number_of_list} | {self.mail} | {idx} | Waiting 20s for the updating...")
+                        await asyncio.sleep(20)
 
                 except Exception as error:
                     logger.error(f"{self.number_of_list} | {self.mail} | {idx} | Error: {error}")
+                    await asyncio.sleep(20)
+                    await self.perform_farming_actions(ref_code)
+
+
+    async def get_stats(self, retry = 0):
+        idx = "STATS"
+        async with async_playwright() as p:
+            proxy = self.proxy.split(':')
+            username, password, host, port = proxy
+            try:
+                logger.info(f"{self.number_of_list} | {self.mail} | {idx} | Waiting for getting the stats...")
+                context = await p.chromium.launch_persistent_context(
+                    '',
+                    headless=HEADLESS,
+                    proxy={'server': f'http://{host}:{port.strip()}',
+                           'username': username,
+                           'password': password},
+                    user_agent=UserAgent().chrome,
+                    args=["--disable-blink-features=AutomationControlled"] + (['--headless=new']) if HEADLESS else [],
+                )
+
+            except Exception as error:
+                retry += 1
+                if retry > 4:
+                    logger.error(f"{self.number_of_list} | {self.mail} | {idx} | UNSUCCESSFULLY GETTING THE STATS: {error}")
+                    return
+                await asyncio.sleep(20)
+                await context.close()
+                await self.get_stats(retry=retry)
+
+            try:
+                await asyncio.sleep(2)
+                page = await context.new_page()
+                await page.goto('https://app.gradient.network/')
+                await page.bring_to_front()
+                await page.wait_for_load_state()
+                await asyncio.sleep(random.randint(2, 6))
+
+            except Exception as error:
+                retry+=1
+                if retry > 5:
+                    logger.error(f"{self.number_of_list} | {self.mail} | {idx} | UNSUCCESSFULLY CONNECT TO WEBSITE! Error: {error}")
+                    return
+                await context.close()
+                await self.get_stats(retry=retry)
+
+            try:
+                logger.info(f"{self.number_of_list} | {self.mail} | {idx} | Logining...")
+                await page.bring_to_front()
+                inputs = page.get_by_placeholder("Enter Email")
+                await expect(inputs).to_be_visible()
+                await inputs.type(self.mail)
+                inputs2 = page.get_by_placeholder("Enter Password")
+                await expect(inputs2).to_be_visible()
+                await inputs2.type(self.email_password)
+                await asyncio.sleep(random.randint(2, 6))
+                button = page.locator('//html/body/div[1]/div[2]/div/div/div/div[4]/button[1]')
+                await expect(button).to_be_visible()
+                await button.click()
+                await asyncio.sleep(random.randint(2, 6))
+
+                await page.goto('https://app.gradient.network/dashboard/node')
+            except:
+                pass
+
+            try:
+                status, points = await self.dashboard_node(page)
+
+                logger.info(
+                    f"{self.number_of_list} | {self.mail} | {idx} | Status node: {status}; Points: {points}")
+            except Exception as error:
+                logger.error(
+                    f"{self.number_of_list} | {self.mail} | {idx} | Something wrong! Try again after 20 seconds.. Error: error {error}")
+                await context.close()
+                await asyncio.sleep(20)
+                await self.get_stats()
+
+
+    async def dashboard_node(self, page):
+            if page.is_closed():
+                return "Page is closed"
+            try:
+                points = page.locator('//html/body/div[1]/div[1]/div[2]/header/div/div[2]/div[2]/div[2]')
+                await expect(points).to_be_visible()
+            except:
+                pass
+            try:
+                status = page.locator('//html/body/div[1]/div[1]/div[2]/main/div/div/div/div/div/div[2]/table/tbody/tr[1]/td[2]/div/span')
+
+            except:
+                try:
+                    status = page.locator(
+                        '//html/body/div[1]/div[1]/div[2]/main/div/div/div/div/div/div[2]/table/tbody/tr/td[2]/div/span')
+                except:
+                    status = page.locator(
+                        '//html/body/div[1]/div[1]/div[2]/main/div/div/div/div/div/div[2]/div/span')
+                    logger.warning(f"{self.number_of_list} | {self.mail} | While extension doesnt add to the list..")
+                    status, points = "NON"
+                    return status, points
+            await expect(status).to_be_visible()
+            try:
+                points = await asyncio.wait_for(points.inner_text(), timeout=10)
+                status = await asyncio.wait_for(status.inner_text(), timeout=10)
+
+            except asyncio.TimeoutError:
+                status, points = "Unknown"
+            await page.close()
+            return status, points
