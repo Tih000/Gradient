@@ -527,6 +527,7 @@ class Gradient:
                 status = page.locator('//html/body/div[1]/div[1]/div[2]/main/div/div/div/div/div/div[2]/table/tbody/tr[1]/td[2]/div/span')
 
             except:
+                pass
                 try:
                     status = page.locator(
                         '//html/body/div[1]/div[1]/div[2]/main/div/div/div/div/div/div[2]/table/tbody/tr/td[2]/div/span')
