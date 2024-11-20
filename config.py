@@ -1,5 +1,8 @@
 HEADLESS = True
-shuffle = True
+shuffle = False
 
-delay_min = 10
-delay_max = 30
+delay_min = 40
+delay_max = 60
+
+delay_for_getting_stats_min = 40
+delay_for_getting_stats_max = 60
