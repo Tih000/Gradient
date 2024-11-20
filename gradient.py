@@ -496,9 +496,11 @@ class Gradient:
                 button = page.locator('//html/body/div[1]/div[2]/div/div/div/div[4]/button[1]')
                 await expect(button).to_be_visible()
                 await button.click()
-                await asyncio.sleep(random.randint(2, 6))
-
+                await asyncio.sleep(3)
+                await page.keyboard.press('Escape')
+                await asyncio.sleep(1)
                 await page.goto('https://app.gradient.network/dashboard/node')
+                await asyncio.sleep(random.randint(2, 6))
             except:
                 pass
 
@@ -511,14 +513,16 @@ class Gradient:
                     f"{self.number_of_list} | {self.mail} | {idx} | Something wrong! Try again after 20 seconds.. Error: error {error}")
                 await context.close()
                 await asyncio.sleep(20)
-                return await self.get_stats()
+                await self.get_stats()
 
 
     async def dashboard_node(self, page):
             points = None
             status = None
             if page.is_closed():
-                return "Page is closed"
+                points = "Page is closed"
+                status = "Page is closed"
+                return status, points
             try:
                 points = page.locator('//html/body/div[1]/div[1]/div[2]/header/div/div[2]/div[2]/div[2]')
                 await expect(points).to_be_visible()
@@ -540,8 +544,8 @@ class Gradient:
                         logger.warning(f"{self.number_of_list} | {self.mail} | While extension doesnt add to the list..")
                     except:
                         pass
-                    points = None
-                    status = None
+                    points = "While adding"
+                    status = "While adding"
                     return status, points
             try:
                 points = await asyncio.wait_for(points.inner_text(), timeout=10)
